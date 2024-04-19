@@ -7,26 +7,53 @@
 import numpy as np
 import pandas as pd
 
-def preprocess(X,y):
-    """
-    Perform mean normalization on the features and true labels.
+'''def preprocess(X,y):
+    print(X.ndim)
+    print(y.ndim)
+    if X.ndim == 1:
+        # Handle the case where X is a one-dimensional array
+        X = mean_normalization(X)
+    elif X.ndim == 2:
+        # Handle the case where X is a two-dimensional array
+        number_of_features = X.shape[1]
+        for i in range(number_of_features):
+            normal_feature = mean_normalization(X[:, i])
+            X[:, i] = normal_feature
+    else:
+        raise ValueError("X must be either a 1D or 2D array")
 
-    Input:
-    - X: Input data (m instances over n features).
-    - y: True labels (m instances).
+    y = mean_normalization(y)
 
-    Returns:
-    - X: The mean normalized inputs.
-    - y: The mean normalized labels.
-    """
-    ###########################################################################
-    # TODO: Implement the normalization function.                             #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
     return X, y
+
+def mean_normalization():
+    feature_min = feature.min()
+    feature_max = feature.max()
+    feature_mean = feature.mean()
+
+    feature = feature-feature_mean
+    feature = feature/(feature_max-feature_min)
+    return feature'''
+
+def preprocess(X,y):
+    print(f"x.dim: {X.ndim}")
+    print(f"y.dim: {y.ndim}")
+    X = mean_normalization(X)
+    y = mean_normalization(y)
+
+    return X, y
+
+def mean_normalization(matrix):
+    min_vector = np.min(matrix, axis=0)
+    max_vector = np.max(matrix, axis=0)
+    mean_vector = np.mean(matrix, axis=0)
+    print(f"min vector: {min_vector}")
+    print(f"max vector: {max_vector}")
+    print(f"mean vector: {mean_vector}")
+ 
+    matrix = matrix-mean_vector
+    matrix = matrix/(max_vector-min_vector)
+    return matrix
 
 def apply_bias_trick(X):
     """
@@ -39,70 +66,44 @@ def apply_bias_trick(X):
     - X: Input data with an additional column of ones in the
         zeroth position (m instances over n+1 features).
     """
-    ###########################################################################
-    # TODO: Implement the bias trick by adding a column of ones to the data.                             #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
-    return X
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
 
+    bias_column =  np.ones((X.shape[0], 1))
+    X_bias = np.hstack((bias_column, X))
+
+    return X_bias
+
+# n - number of  instances(row - 0)
+# m - number of features(col -1)
 def compute_cost(X, y, theta):
-    """
-    Computes the average squared difference between an observation's actual and
-    predicted values for linear regression.  
+    number_of_instances = X.shape[0]
+    number_of_features = X.shape[1]
 
-    Input:
-    - X: Input data (m instances over n features).
-    - y: True labels (m instances).
-    - theta: the parameters (weights) of the model being learned.
+    if(len(theta) != number_of_features):
+        raise Exception("Theta must be a vector with a size equal to the number of features.")
+    if(len(y) != number_of_instances):
+        raise Exception("True labels must be a vector with a size equal to the number of instances.")
 
-    Returns:
-    - J: the cost associated with the current set of parameters (single number).
-    """
+    h_teta = X @ theta
+    sqrErrors = np.square(h_teta - y )
     
-    J = 0  # We use J for the cost.
-    ###########################################################################
-    # TODO: Implement the MSE cost function.                                  #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
-    return J
+    return  1 / (2 * number_of_instances) * np.sum(sqrErrors)
+
+
 
 def gradient_descent(X, y, theta, alpha, num_iters):
-    """
-    Learn the parameters of the model using gradient descent using 
-    the training set. Gradient descent is an optimization algorithm 
-    used to minimize some (loss) function by iteratively moving in 
-    the direction of steepest descent as defined by the negative of 
-    the gradient. We use gradient descent to update the parameters
-    (weights) of our model.
+    number_of_instances = X.shape[0]
+    J_array = np.empty(num_iters)
+    theta_copy = np.copy(theta)
+    for iteration in range(num_iters):
+        theta_copy =generate_new_teta(X, y, alpha, number_of_instances, theta_copy)
+        J_array[iteration] = compute_cost(X, y, theta_copy)
 
-    Input:
-    - X: Input data (m instances over n features).
-    - y: True labels (m instances).
-    - theta: The parameters (weights) of the model being learned.
-    - alpha: The learning rate of your model.
-    - num_iters: The number of updates performed.
+    return theta_copy, J_array
 
-    Returns:
-    - theta: The learned parameters of your model.
-    - J_history: the loss value for every iteration.
-    """
-    
-    theta = theta.copy() # optional: theta outside the function will not change
-    J_history = [] # Use a python list to save the cost value in every iteration
-    ###########################################################################
-    # TODO: Implement the gradient descent optimization algorithm.            #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
-    return theta, J_history
+
+
 
 def compute_pinv(X, y):
     """
@@ -121,14 +122,10 @@ def compute_pinv(X, y):
     - pinv_theta: The optimal parameters of your model.
     """
     
-    pinv_theta = []
-    ###########################################################################
-    # TODO: Implement the pseudoinverse algorithm.                            #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    pinv_X = (np.linalg.inv(X.T @ X)) @ X.T 
+    pinv_theta = pinv_X @ y
+
+    print(pinv_theta)
     return pinv_theta
 
 def efficient_gradient_descent(X, y, theta, alpha, num_iters):
@@ -149,17 +146,26 @@ def efficient_gradient_descent(X, y, theta, alpha, num_iters):
     - theta: The learned parameters of your model.
     - J_history: the loss value for every iteration.
     """
-    
-    theta = theta.copy() # optional: theta outside the function will not change
-    J_history = [] # Use a python list to save the cost value in every iteration
-    ###########################################################################
-    # TODO: Implement the efficient gradient descent optimization algorithm.  #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
-    return theta, J_history
+    number_of_instances = X.shape[0]
+    J_history = np.empty(num_iters)
+    theta_copy = np.copy(theta)
+    prev_j = compute_cost(X, y, theta_copy)
+    for iteration in range(num_iters):
+        theta_copy =generate_new_teta(X, y, alpha, number_of_instances, theta_copy)
+        J_history[iteration] = compute_cost(X, y, theta_copy)
+        if(prev_j - J_history[iteration] < 1e-8):
+            print(f"for alpha: {alpha} breaking in iteration: {iteration}. when theta: {theta_copy}. origin theta:{theta} when cost change: {prev_j - J_history[iteration]}")
+            break
+        prev_j = J_history[iteration]
+
+
+    return theta_copy, J_history
+
+def generate_new_teta(X, y, alpha, number_of_instances, theta_copy):
+    h_teta = X @ theta_copy
+    errors = h_teta - y
+    theta_copy -= (alpha/number_of_instances) * (X.T @ errors)
+    return theta_copy
 
 def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
     """
@@ -178,14 +184,10 @@ def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
     """
     
     alphas = [0.00001, 0.00003, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 2, 3]
-    alpha_dict = {} # {alpha_value: validation_loss}
-    ###########################################################################
-    # TODO: Implement the function and find the best alpha value.             #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    number_of_features = X_train.shape[1]
+    theta = np.random.random(size=number_of_features)
+    alpha_cost_lambda = lambda  alpha1 : compute_cost(X_val,y_val, efficient_gradient_descent(X_train, y_train, theta, alpha1, iterations)[0])
+    alpha_dict = { alpha : alpha_cost_lambda(alpha) for alpha in alphas}
     return alpha_dict
 
 def forward_feature_selection(X_train, y_train, X_val, y_val, best_alpha, iterations):
