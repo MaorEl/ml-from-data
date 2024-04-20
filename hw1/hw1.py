@@ -131,18 +131,16 @@ def forward_feature_selection(X_train, y_train, X_val, y_val, best_alpha, iterat
 
 def create_square_features(df):
     df_poly = df.copy()
-    new_features = [df_poly]
 
     # creating the square features
     for column in df.columns:
         new_column = f"{column}^2"
-        new_features.append(pd.DataFrame(df[column] ** 2, columns=[new_column]))
+        df_poly[new_column] = df[column] ** 2
 
     # creating the cross features
     for i in range(len(df.columns)):
         for j in range(i + 1, len(df.columns)):
             new_column = f"{df.columns[i]}*{df.columns[j]}"
-            new_features.append(pd.DataFrame(df[df.columns[i]] * df[df.columns[j]], columns=[new_column]))
+            df_poly[new_column] = df[df.columns[i]] * df[df.columns[j]]
 
-    df_poly = pd.concat(new_features, axis=1).astype(float)
     return df_poly
