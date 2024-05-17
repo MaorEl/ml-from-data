@@ -177,19 +177,17 @@ class NaiveNormalClassDistribution():
         - dataset: The dataset as a 2d numpy array, assuming the class label is the last column
         - class_value : The class to calculate the parameters for.
         """
-        self.dataset = dataset
-        self.class_value = class_value
-        self.class_data = dataset[dataset[:, -1] == class_value, :-1]
-        self.mean = np.mean(self.class_data, axis=0)
-        self.std = np.std(self.class_data, axis=0)
+        self.amount_of_instances = len(dataset)
+        self._class_data = dataset[dataset[:, -1] == class_value, :-1]
+        self._mean = np.mean(self._class_data, axis=0)
+        self._std = np.std(self._class_data, axis=0)
 
     def get_prior(self):
         """
         Returns the prior porbability of the class according to the dataset distribution.
         """
-        class_instances = len(self.class_data)
-        all_instances = len(self.dataset)
-        prior = class_instances / all_instances
+        class_instances = len(self._class_data)
+        prior = class_instances / self.amount_of_instances
 
         return prior
 
@@ -199,7 +197,7 @@ class NaiveNormalClassDistribution():
         """
         likelihood = 1
         for i in range(len(x)):
-            likelihood *= normal_pdf(x[i], self.mean[i], self.std[i])
+            likelihood *= normal_pdf(x[i], self._mean[i], self._std[i])
         return likelihood
 
     def get_instance_posterior(self, x):
@@ -226,8 +224,8 @@ class MAPClassifier():
             - ccd1 : An object contating the relevant parameters and methods 
                      for the distribution of class 1.
         """
-        self.ccd0 = ccd0
-        self.ccd1 = ccd1
+        self._ccd0 = ccd0
+        self._ccd1 = ccd1
 
     def predict(self, x):
         """
@@ -238,8 +236,8 @@ class MAPClassifier():
         Output
             - 0 if the posterior probability of class 0 is higher and 1 otherwise.
         """
-        posterior_class_0 = self.ccd0.get_instance_posterior(x)
-        posterior_class_1 = self.ccd1.get_instance_posterior(x)
+        posterior_class_0 = self._ccd0.get_instance_posterior(x)
+        posterior_class_1 = self._ccd1.get_instance_posterior(x)
 
         if posterior_class_0 > posterior_class_1:
             ret_val = 0
@@ -308,19 +306,17 @@ class MultiNormalClassDistribution():
         - dataset: The dataset as a numpy array
         - class_value : The class to calculate the parameters for.
         """
-        self.dataset = dataset
-        self.class_value = class_value
-        self.class_data = dataset[dataset[:, -1] == class_value, :-1]
-        self.mean = np.mean(self.class_data, axis=0)
-        self.cov = np.cov(self.class_data, rowvar=False)
+        self._all_instances = len(dataset)
+        self._class_data = dataset[dataset[:, -1] == class_value, :-1]
+        self._mean = np.mean(self._class_data, axis=0)
+        self._covariance = np.cov(self._class_data, rowvar=False)
 
     def get_prior(self):
         """
         Returns the prior porbability of the class according to the dataset distribution.
         """
-        class_instances = len(self.class_data)
-        all_instances = len(self.dataset)
-        prior = class_instances / all_instances
+        class_instances = len(self._class_data)
+        prior = class_instances / self._all_instances
 
         return prior
 
@@ -328,7 +324,7 @@ class MultiNormalClassDistribution():
         """
         Returns the likelihood of the instance under the class according to the dataset distribution.
         """
-        likelihood = multi_normal_pdf(x, self.mean, self.cov)
+        likelihood = multi_normal_pdf(x, self._mean, self._covariance)
         return likelihood
 
     def get_instance_posterior(self, x):
@@ -352,8 +348,8 @@ class MaxPrior():
             - ccd0 : An object contating the relevant parameters and methods for the distribution of class 0.
             - ccd1 : An object contating the relevant parameters and methods for the distribution of class 1.
         """
-        self.ccd0 = ccd0
-        self.ccd1 = ccd1
+        self._ccd0 = ccd0
+        self._ccd1 = ccd1
 
     def predict(self, x):
         """
@@ -364,8 +360,8 @@ class MaxPrior():
         Output
             - 0 if the posterior probability of class 0 is higher and 1 otherwise.
         """
-        prior_class_0 = self.ccd0.get_prior()
-        prior_class_1 = self.ccd1.get_prior()
+        prior_class_0 = self._ccd0.get_prior()
+        prior_class_1 = self._ccd1.get_prior()
 
         if prior_class_0 > prior_class_1:
             ret_val = 0
@@ -386,8 +382,8 @@ class MaxLikelihood():
             - ccd0 : An object contating the relevant parameters and methods for the distribution of class 0.
             - ccd1 : An object contating the relevant parameters and methods for the distribution of class 1.
         """
-        self.ccd0 = ccd0
-        self.ccd1 = ccd1
+        self._ccd0 = ccd0
+        self._ccd1 = ccd1
 
     def predict(self, x):
         """
@@ -398,8 +394,8 @@ class MaxLikelihood():
         Output
             - 0 if the posterior probability of class 0 is higher and 1 otherwise.
         """
-        likelihood_class_0 = self.ccd0.get_instance_likelihood(x)
-        likelihood_class_1 = self.ccd1.get_instance_likelihood(x)
+        likelihood_class_0 = self._ccd0.get_instance_likelihood(x)
+        likelihood_class_1 = self._ccd1.get_instance_likelihood(x)
 
         if likelihood_class_0 > likelihood_class_1:
             ret_val = 0
@@ -422,22 +418,23 @@ class DiscreteNBClassDistribution():
         - dataset: The dataset as a numpy array.
         - class_value: Compute the relevant parameters only for instances from the given class.
         """
-        self.dataset = dataset[:-1] # removing the class column
-        self.class_value = class_value
-        self.class_data = dataset[dataset[:, -1] == class_value, :-1]
-        self.num_instances = self.class_data.shape[0]
-        self.num_features = self.class_data.shape[1]
-        self.feature_values = [np.unique(dataset[:, i]) for i in range(self.num_features)]
-        self.feature_counts = [np.bincount(self.class_data[:, i].astype(int), minlength=len(self.feature_values[i])) for i in range(self.num_features)]
+        self._all_instances = len(dataset)
+        self._class_data = dataset[dataset[:, -1] == class_value, :-1]
+        self._num_instances = self._class_data.shape[0]
+        self._num_features = self._class_data.shape[1]
+        dataset_without_class_column = dataset[:-1]  # removing the class column
+        self._unique_feature_values = [np.unique(dataset_without_class_column[:, i]) for i in range(self._num_features)]
+        self._feature_counters = [np.bincount(self._class_data[:, i].astype(int),
+                                              minlength=len(self._unique_feature_values[i]))
+                                  for i in range(self._num_features)]
 
     def get_prior(self):
         """
         Returns the prior porbability of the class 
         according to the dataset distribution.
         """
-        class_instances = len(self.class_data)
-        all_instances = len(self.dataset)
-        prior = class_instances / all_instances
+        class_instances = len(self._class_data)
+        prior = class_instances / self._all_instances
 
         return prior
 
@@ -447,13 +444,14 @@ class DiscreteNBClassDistribution():
         the class according to the dataset distribution.
         """
         likelihood = 1
-        for i in range(self.num_features):
-            feature_index = np.where(self.feature_values[i] == x[i])[0]
+
+        for i in range(self._num_features):
+            feature_index = np.where(self._unique_feature_values[i] == x[i])[0]
             if feature_index.size == 0:
                 likelihood *= EPSILLON
             else:
-                feature_count = self.feature_counts[i][feature_index[0]]
-                likelihood *= (feature_count + 1) / (self.num_instances + len(self.feature_values[i]))
+                feature_count = self._feature_counters[i][feature_index[0]]
+                likelihood *= (feature_count + 1) / (self._num_instances + len(self._unique_feature_values[i]))
 
         return likelihood
 
@@ -479,8 +477,8 @@ class MAPClassifier_DNB():
             - ccd0 : An object contating the relevant parameters and methods for the distribution of class 0.
             - ccd1 : An object contating the relevant parameters and methods for the distribution of class 1.
         """
-        self.ccd0 = ccd0
-        self.ccd1 = ccd1
+        self._ccd0 = ccd0
+        self._ccd1 = ccd1
 
     def predict(self, x):
         """
@@ -492,8 +490,8 @@ class MAPClassifier_DNB():
             - 0 if the posterior probability of class 0 is higher and 1 otherwise.
         """
 
-        posterior_class_0 = self.ccd0.get_instance_posterior(x)
-        posterior_class_1 = self.ccd1.get_instance_posterior(x)
+        posterior_class_0 = self._ccd0.get_instance_posterior(x)
+        posterior_class_1 = self._ccd1.get_instance_posterior(x)
 
         if posterior_class_0 > posterior_class_1:
             ret_val = 0
