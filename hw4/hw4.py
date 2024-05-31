@@ -47,8 +47,8 @@ def feature_selection(X, y, n_features=5):
         pearson_correlation_for_feature = pearson_correlation(X.iloc[:, i], y)
         correlations_by_feature[feature_name] = pearson_correlation_for_feature
 
-    sorted_correlations = sorted(correlations_by_feature.items(), key=lambda x: abs(x[1]), reverse=True)
-    best_features = [x[0] for x in sorted_correlations[:n_features]]
+    sorted_correlations_by_feature = sorted(correlations_by_feature.items(), key=lambda x: abs(x[1]), reverse=True)
+    best_features = [x[0] for x in sorted_correlations_by_feature[:n_features]]
 
     return best_features
 
