@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-def pearson_correlation( x, y):
+def pearson_correlation(x, y):
     """
     Calculate the Pearson correlation coefficient for two given columns of data.
 
@@ -14,13 +14,14 @@ def pearson_correlation( x, y):
     - The Pearson correlation coefficient between the two columns.    
     """
     r = 0.0
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    mu_x = np.mean(x)
+    mu_y = np.mean(y)
+
+    mone = np.sum((x - mu_x) * (y - mu_y))
+    mechane_sums = np.sum((x - mu_x) ** 2) * np.sum((y - mu_y) ** 2)
+    mechane = np.sqrt(mechane_sums)
+
+    r = mone / mechane
     return r
 
 def feature_selection(X, y, n_features=5):
@@ -35,13 +36,20 @@ def feature_selection(X, y, n_features=5):
     - best_features: list of best features (names - list of strings).  
     """
     best_features = []
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    X["date"] = pd.to_numeric(pd.to_datetime(X["date"]))
+    X["id"] = pd.to_numeric(pd.to_datetime(X["id"]))
+
+    correlations_by_feature = {}
+
+    amount_of_features = X.shape[1]
+    for i in range(amount_of_features):
+        feature_name = X.columns[i]
+        pearson_correlation_for_feature = pearson_correlation(X.iloc[:, i], y)
+        correlations_by_feature[feature_name] = pearson_correlation_for_feature
+
+    sorted_correlations = sorted(correlations_by_feature.items(), key=lambda x: abs(x[1]), reverse=True)
+    best_features = [x[0] for x in sorted_correlations[:n_features]]
+
     return best_features
 
 class LogisticRegressionGD(object):
