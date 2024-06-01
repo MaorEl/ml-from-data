@@ -99,7 +99,6 @@ class LogisticRegressionGD(object):
           n_features is the number of features.
         y : array-like, shape = [n_examples]
           Target values.
-
         """
         np.random.seed(self.random_state)
         m, n = X.shape
@@ -213,13 +212,9 @@ def norm_pdf(data, mu, sigma):
     Returns the normal distribution pdf according to the given mu and sigma for the given x.    
     """
     p = None
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    coefficient = 1 / (sigma * np.sqrt(2 * np.pi))
+    exponent = -0.5 * ((data - mu) / sigma) ** 2
+    p = coefficient * np.exp(exponent)
     return p
 
 class EM(object):
