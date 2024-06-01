@@ -101,11 +101,12 @@ class LogisticRegressionGD(object):
           Target values.
         """
         np.random.seed(self.random_state)
+        X = np.column_stack((np.ones(X.shape[0]), X))  # Add bias trick
         m, n = X.shape
         self.theta = np.random.rand(n)
         for iteration in range(self.n_iter):
             h = self.sigmoid_function(X)
-            J = 1/m * (-y @ np.log(h) - (1 - y) @ np.log(1 - h))
+            J = self.cost_function(h, m, y)
             self.Js.append(J)
             gradient = self.calculate_gradient(X, h, m, y)
             self.theta = self.calculate_theta(gradient)
@@ -113,11 +114,14 @@ class LogisticRegressionGD(object):
             if self.has_no_impact():
                 break
 
+    def cost_function(self, h, m, y):
+        return 1 / m * (-y @ np.log(h) - (1 - y) @ np.log(1 - h))
+
     def calculate_theta(self, gradient):
         return self.theta - (self.eta * gradient)
 
     def calculate_gradient(self, X, h, m, y):
-        return 1 / m * X.T @ (h - y)
+        return (1 / m) * X.T @ (h - y)
 
     def has_no_impact(self):
         return len(self.Js) > 1 and np.abs(self.Js[-1] - self.Js[-2]) < self.eps
@@ -129,7 +133,7 @@ class LogisticRegressionGD(object):
         ----------
         X : {array-like}, shape = [n_examples, n_features]
         """
-
+        X = np.column_stack((np.ones(X.shape[0]), X))  # Add bias trick
         h = self.sigmoid_function(X)
         preds = (h >= 0.5).astype(int)
         return preds
@@ -213,8 +217,9 @@ def norm_pdf(data, mu, sigma):
     """
     p = None
     coefficient = 1 / (sigma * np.sqrt(2 * np.pi))
-    exponent = -0.5 * ((data - mu) / sigma) ** 2
-    p = coefficient * np.exp(exponent)
+    exponent = np.exp(-0.5 * ((data - mu) / sigma) ** 2)
+    p = coefficient * exponent
+
     return p
 
 class EM(object):
@@ -447,3 +452,35 @@ def generate_datasets():
            'dataset_b_features': dataset_b_features,
            'dataset_b_labels': dataset_b_labels
            }
+
+
+# Function for ploting the decision boundaries of a model
+def plot_decision_regions(X, y, classifier, resolution=0.01, title=""):
+
+    # setup marker generator and color map
+    markers = ('.', '.')
+    colors = ('blue', 'red')
+    from matplotlib.colors import ListedColormap
+    cmap = ListedColormap(colors[:len(np.unique(y))])
+    # plot the decision surface
+    x1_min, x1_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    x2_min, x2_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    xx1, xx2 = np.meshgrid(np.arange(x1_min, x1_max, resolution),
+                           np.arange(x2_min, x2_max, resolution))
+    Z = classifier.predict(np.array([xx1.ravel(), xx2.ravel()]).T)
+    Z = Z.reshape(xx1.shape)
+    from matplotlib import pyplot as plt
+    plt.contourf(xx1, xx2, Z, alpha=0.3, cmap=cmap)
+    plt.xlim(xx1.min(), xx1.max())
+    plt.ylim(xx2.min(), xx2.max())
+
+    for idx, cl in enumerate(np.unique(y)):
+        plt.title(title)
+        plt.scatter(x=X[y == cl, 0],
+                    y=X[y == cl, 1],
+                    alpha=0.8,
+                    c=colors[idx],
+                    marker=markers[idx],
+                    label=cl,
+                    edgecolor='black')
+    plt.show()
