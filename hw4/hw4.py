@@ -254,57 +254,40 @@ class EM(object):
 
     # initial guesses for parameters
     def init_params(self, data):
-        """
-        Initialize distribution params
-        """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        """ Initialize parameters randomly based on the data distribution """
+        print(data)
+        print(data[0])
+        self.weights = np.ones(self.k) / self.k  # Start with equal weights
+        self.mus = np.random.choice(data, self.k, replace=False)  # Randomly chosen means from the data
+        self.sigmas = np.std(data) * np.random.rand(self.k) + 1  # Random standard deviations
 
     def expectation(self, data):
-        """
-        E step - This function should calculate and update the responsibilities
-        """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        """ E-step: compute responsibilities, i.e., the probabilities of each component given the data """
+        n = data.shape[0]
+        self.responsibilities = np.zeros((n, self.k))
+        for j in range(self.k):
+            self.responsibilities[:, j] = self.weights[j] * norm_pdf(data, self.mus[j], self.sigmas[j])
+        self.responsibilities /= self.responsibilities.sum(axis=1, keepdims=True)
 
     def maximization(self, data):
-        """
-        M step - This function should calculate and update the distribution params
-        """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        """ M-step: update the parameters of the Gaussians """
+        weights = self.responsibilities.sum(axis=0)
+        self.weights = weights / data.size
+        self.mus = np.sum(data[:, np.newaxis] * self.responsibilities, axis=0) / weights
+        self.sigmas = np.sqrt(np.sum(self.responsibilities * (data[:, np.newaxis] - self.mus) ** 2, axis=0) / weights)
 
     def fit(self, data):
-        """
-        Fit training data (the learning phase).
-        Use init_params and then expectation and maximization function in order to find params
-        for the distribution.
-        Store the params in attributes of the EM object.
-        Stop the function when the difference between the previous cost and the current is less than eps
-        or when you reach n_iter.
-        """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+        """ Fit the model to the data using the EM algorithm """
+        data = data[:,0]
+        self.init_params(data)
+        log_likelihood_old = 0
+        for iteration in range(self.n_iter):
+            self.expectation(data)
+            self.maximization(data)
+            log_likelihood_new = np.sum(np.log(np.sum(self.weights * norm_pdf(data[:, np.newaxis], self.mus, self.sigmas), axis=1)))
+            if np.abs(log_likelihood_new - log_likelihood_old) < self.eps:
+                break
+            log_likelihood_old = log_likelihood_new
 
     def get_dist_params(self):
         return self.weights, self.mus, self.sigmas
@@ -323,15 +306,13 @@ def gmm_pdf(data, weights, mus, sigmas):
     Returns the GMM distribution pdf according to the given mus, sigmas and weights
     for the given data.    
     """
-    pdf = None
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
-    return pdf
+    pdf_is = [normal_pdf(data, mus[i], sigmas[i]) for i in range(len(mus))]
+    return sum(pdf_is[i] * weights [i] for i in range(len(mus)))
+
+def normal_pdf(x, mu, sigma):
+    denominator = sigma * ((2*np.pi)**0.5)
+    numerator  = np.exp((-(x-mu)**2) / 2*(sigma**2))
+    return numerator/ denominator
 
 class NaiveBayesGaussian(object):
     """
