@@ -101,16 +101,27 @@ class LogisticRegressionGD(object):
           Target values.
 
         """
-        # set random seed
         np.random.seed(self.random_state)
+        m, n = X.shape
+        self.theta = np.random.rand(n)
+        for iteration in range(self.n_iter):
+            h = self.sigmoid_function(X)
+            J = 1/m * (-y @ np.log(h) - (1 - y) @ np.log(1 - h))
+            self.Js.append(J)
+            gradient = self.calculate_gradient(X, h, m, y)
+            self.theta = self.calculate_theta(gradient)
+            self.thetas.append(self.theta.copy())
+            if self.has_no_impact():
+                break
 
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+    def calculate_theta(self, gradient):
+        return self.theta - (self.eta * gradient)
+
+    def calculate_gradient(self, X, h, m, y):
+        return 1 / m * X.T @ (h - y)
+
+    def has_no_impact(self):
+        return len(self.Js) > 1 and np.abs(self.Js[-1] - self.Js[-2]) < self.eps
 
     def predict(self, X):
         """
@@ -119,15 +130,25 @@ class LogisticRegressionGD(object):
         ----------
         X : {array-like}, shape = [n_examples, n_features]
         """
-        preds = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+
+        h = self.sigmoid_function(X)
+        preds = (h >= 0.5).astype(int)
         return preds
+
+    def sigmoid_function(self, X):
+        return 1 / (1 + np.exp(-(X @ self.theta.T)))
+
+
+def calculate_accuracy(y_true, y_prediction):
+    """
+    Calculate the accuracy of the predictions.
+    """
+    correct_predictions = np.sum(y_true == y_prediction)
+    total_predictions = len(y_true)
+    accuracy = correct_predictions / total_predictions
+
+    return accuracy
+
 
 def cross_validation(X, y, folds, algo, random_state):
     """
@@ -154,17 +175,29 @@ def cross_validation(X, y, folds, algo, random_state):
     """
 
     cv_accuracy = None
-
-    # set random seed
     np.random.seed(random_state)
+    dataset = np.column_stack((X, y))
+    np.random.shuffle(dataset)
+    subsets = np.array_split(dataset, folds)
+    accuracies = []
 
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    # For each subset, treat one subset in size of 100/folds% as the test set and
+    # the other subsets will be the training set
+    for i in range(folds):
+        current_validation_set = subsets[i]
+        # Ensure the train set fold will not include the current fold test set
+        current_training_set = np.vstack([subset for j, subset in enumerate(subsets) if j != i])
+
+        X_train, y_train = current_training_set[:, :-1], current_training_set[:, -1]
+        X_val, y_val = current_validation_set[:, :-1], current_validation_set[:, -1]
+
+        algo.fit(X_train, y_train)
+        y_prediction = algo.predict(X_val)
+
+        accuracy = calculate_accuracy(y_val, y_prediction)
+        accuracies.append(accuracy)
+
+    cv_accuracy = np.mean(accuracies)
     return cv_accuracy
 
 def norm_pdf(data, mu, sigma):
