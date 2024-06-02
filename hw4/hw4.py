@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from matplotlib.colors import ListedColormap
+import matplotlib.pyplot as plt
 
 
 def pearson_correlation(x, y):
@@ -124,7 +126,12 @@ class LogisticRegressionGD(object):
         return (1 / m) * X.T @ (h - y)
 
     def has_no_impact(self):
-        return len(self.Js) > 1 and np.abs(self.Js[-1] - self.Js[-2]) < self.eps
+        ret_val = False
+
+        if len(self.Js) > 1:
+            ret_val = np.abs(self.Js[-1] - self.Js[-2]) < self.eps
+
+        return ret_val
 
     def predict(self, X):
         """
@@ -392,14 +399,34 @@ def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
     lor_test_acc = None
     bayes_train_acc = None
     bayes_test_acc = None
+    # Todo maor - Provide one or two sentences on each graph explaining what you observe in the graph.
+    # Todo maor - uncomment Naive Bayes code
+    lor = LogisticRegressionGD(eta=best_eta, eps=best_eps)
+    lor.fit(x_train, y_train)
 
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+    # nb = NaiveBayesGaussian(k=k)
+    # nb.fit(x_train, y_train)
+
+    lor_train_acc = calculate_accuracy(y_train, lor.predict(x_train))
+    lor_test_acc = calculate_accuracy(y_test, lor.predict(x_test))
+    # bayes_train_acc = calculate_accuracy(y_train, nb.predict(x_train))
+    # bayes_test_acc = calculate_accuracy(y_test, nb.predict(x_test))
+
+    plot_decision_regions(x_train, y_train, lor, title="Logistic Regression Decision Boundary")
+    # plot_decision_regions(x_train, y_train, nb, title="Naive Bayes Decision Boundary")
+
+    # Plot cost vs iteration for Logistic Regression
+    plt.plot(lor.Js)
+    plt.xlabel('Iteration')
+    plt.ylabel('Cost')
+    plt.title('Logistic Regression - Cost vs Iteration')
+    plt.show()
+
+    print('Logistic Regression - Train Accuracy: ', lor_train_acc)
+    print('Logistic Regression - Test Accuracy: ', lor_test_acc)
+    # print('Naive Bayes - Train Accuracy: ', bayes_train_acc)
+    # print('Naive Bayes - Test Accuracy: ', bayes_test_acc)
+
     return {'lor_train_acc': lor_train_acc,
             'lor_test_acc': lor_test_acc,
             'bayes_train_acc': bayes_train_acc,
@@ -432,11 +459,9 @@ def generate_datasets():
 
 # Function for ploting the decision boundaries of a model
 def plot_decision_regions(X, y, classifier, resolution=0.01, title=""):
-
     # setup marker generator and color map
     markers = ('.', '.')
     colors = ('blue', 'red')
-    from matplotlib.colors import ListedColormap
     cmap = ListedColormap(colors[:len(np.unique(y))])
     # plot the decision surface
     x1_min, x1_max = X[:, 0].min() - 1, X[:, 0].max() + 1
@@ -445,7 +470,6 @@ def plot_decision_regions(X, y, classifier, resolution=0.01, title=""):
                            np.arange(x2_min, x2_max, resolution))
     Z = classifier.predict(np.array([xx1.ravel(), xx2.ravel()]).T)
     Z = Z.reshape(xx1.shape)
-    from matplotlib import pyplot as plt
     plt.contourf(xx1, xx2, Z, alpha=0.3, cmap=cmap)
     plt.xlim(xx1.min(), xx1.max())
     plt.ylim(xx2.min(), xx2.max())
