@@ -329,44 +329,39 @@ class NaiveBayesGaussian(object):
     def __init__(self, k=1, random_state=1991):
         self.k = k
         self.random_state = random_state
-        self.prior = None
+        self.prior = {}  # Prior probabilities for each class
+        self.class_params = {}  # Parameters for each class and feature
+
 
     def fit(self, X, y):
-        """
-        Fit training data.
+        classes = np.unique(y)
+        for cls in classes:
+            print(f"calculating class: {cls}")
+            self.prior[cls] = sum(1 for value in y if value == cls)/ len(y) # np.mean(y == cls) 
+            X_cls = X[y == cls]
+            class_features = []
+            for feature_index in range(X.shape[1]):
+                feature_data = X_cls[:, feature_index]
+                em = EM(self.k, random_state=self.random_state)
+                print(f"before reshape: {feature_data}")
+                print(f"after reshape: {feature_data.reshape(-1, 1)}")
+                em.fit(feature_data.reshape(-1, 1))
+                class_features.append((em.get_dist_params()))
+                print(f"adding feature norms: {em.get_dist_params()}")
 
-        Parameters
-        ----------
-        X : array-like, shape = [n_examples, n_features]
-          Training vectors, where n_examples is the number of examples and
-          n_features is the number of features.
-        y : array-like, shape = [n_examples]
-          Target values.
-        """
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
+            self.class_params[cls] = class_features
+            print(f"class_params[cls]: {self.class_params[cls]}")
 
     def predict(self, X):
-        """
-        Return the predicted class labels for a given instance.
-        Parameters
-        ----------
-        X : {array-like}, shape = [n_examples, n_features]
-        """
-        preds = None
-        ###########################################################################
-        # TODO: Implement the function.                                           #
-        ###########################################################################
-        pass
-        ###########################################################################
-        #                             END OF YOUR CODE                            #
-        ###########################################################################
-        return preds
+        log_probs = np.zeros((X.shape[0], len(self.prior)))
+        for idx, (cls, priors) in enumerate(self.prior.items()):
+            for feature_index in range(X.shape[1]):
+                feature_data = X[:, feature_index]
+                weights, mus, sigmas = self.class_params[cls][feature_index]
+                log_probs[:, idx] += np.log(gmm_pdf(feature_data, weights, mus, sigmas) + 1e-9)  # Log of GMM PDF + eps
+            log_probs[:, idx] += np.log(priors)  # Adding log of prior probability
+
+        return np.array(list(self.prior.keys()))[np.argmax(log_probs, axis=1)]
 
 def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
     ''' 
