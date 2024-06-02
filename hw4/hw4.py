@@ -262,8 +262,8 @@ class EM(object):
     # initial guesses for parameters
     def init_params(self, data):
         """ Initialize parameters randomly based on the data distribution """
-        print(data)
-        print(data[0])
+        # print(data)
+        # print(data[0])
         self.weights = np.ones(self.k) / self.k  # Start with equal weights
         self.mus = np.random.choice(data, self.k, replace=False)  # Randomly chosen means from the data
         self.sigmas = np.std(data) * np.random.rand(self.k) + 1  # Random standard deviations
@@ -343,21 +343,21 @@ class NaiveBayesGaussian(object):
     def fit(self, X, y):
         classes = np.unique(y)
         for cls in classes:
-            print(f"calculating class: {cls}")
+            # print(f"calculating class: {cls}")
             self.prior[cls] = sum(1 for value in y if value == cls)/ len(y) # np.mean(y == cls) 
             X_cls = X[y == cls]
             class_features = []
             for feature_index in range(X.shape[1]):
                 feature_data = X_cls[:, feature_index]
                 em = EM(self.k, random_state=self.random_state)
-                print(f"before reshape: {feature_data}")
-                print(f"after reshape: {feature_data.reshape(-1, 1)}")
+                # print(f"before reshape: {feature_data}")
+                # print(f"after reshape: {feature_data.reshape(-1, 1)}")
                 em.fit(feature_data.reshape(-1, 1))
                 class_features.append((em.get_dist_params()))
-                print(f"adding feature norms: {em.get_dist_params()}")
+                # print(f"adding feature norms: {em.get_dist_params()}")
 
             self.class_params[cls] = class_features
-            print(f"class_params[cls]: {self.class_params[cls]}")
+            # print(f"class_params[cls]: {self.class_params[cls]}")
 
     def predict(self, X):
         log_probs = np.zeros((X.shape[0], len(self.prior)))
@@ -438,18 +438,63 @@ def generate_datasets():
     dataset_a_labels = None
     dataset_b_features = None
     dataset_b_labels = None
-    ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
+
+    np.random.seed(12)
+
+    # Generate dataset_a
+    mean1_a = [0, 0, 0]
+    cov1_a = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    mean2_a = [1, 1, 1]
+    cov2_a = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    class1_a = np.random.multivariate_normal(mean1_a, cov1_a, 500)
+    class2_a = np.random.multivariate_normal(mean2_a, cov2_a, 500)
+    dataset_a_features = np.concatenate((class1_a, class2_a), axis=0)
+    dataset_a_labels = np.concatenate((np.zeros(500), np.ones(500)))
+
+    # Generate dataset_b
+    mean1_b = [-2, -2, -2]
+    cov1_b = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    mean2_b = [2, 2, 2]
+    cov2_b = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    class1_b = np.random.multivariate_normal(mean1_b, cov1_b, 500)
+    class2_b = np.random.multivariate_normal(mean2_b, cov2_b, 500)
+    dataset_b_features = np.concatenate((class1_b, class2_b), axis=0)
+    dataset_b_labels = np.concatenate((np.zeros(500), np.ones(500)))
+
     return{'dataset_a_features': dataset_a_features,
            'dataset_a_labels': dataset_a_labels,
            'dataset_b_features': dataset_b_features,
            'dataset_b_labels': dataset_b_labels
            }
+
+def plot_dataset(dataset, labels, title):
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(dataset[:, 0], dataset[:, 1], dataset[:, 2], c=labels)
+    ax.set_title(title)
+    plt.show()
+
+
+def split_train_test(data, labels, test_ratio=0.2):
+    # Determine the number of total samples and the number of test samples
+    total_samples = len(data)
+    num_test_samples = int(total_samples * test_ratio)
+
+    # Shuffle the indices
+    indices = list(range(total_samples))
+    np.random.shuffle(indices)
+
+    # Split the indices for the train and test set
+    train_indices = indices[num_test_samples:]
+    test_indices = indices[:num_test_samples]
+
+    # Create the train and test set
+    train_data = data[train_indices]
+    train_labels = labels[train_indices]
+    test_data = data[test_indices]
+    test_labels = labels[test_indices]
+
+    return train_data, train_labels, test_data, test_labels
 
 
 # Function for ploting the decision boundaries of a model
