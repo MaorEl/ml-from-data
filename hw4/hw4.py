@@ -428,7 +428,6 @@ def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
             'bayes_test_acc': bayes_test_acc}
 
 def generate_datasets():
-    from scipy.stats import multivariate_normal
     '''
     This function should have no input.
     It should generate the two dataset as described in the jupyter notebook,
@@ -441,31 +440,58 @@ def generate_datasets():
 
     np.random.seed(12)
 
-    # Generate dataset_a
-    mean1_a = [0, 0, 0]
-    cov1_a = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-    mean2_a = [1, 1, 1]
-    cov2_a = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-    class1_a = np.random.multivariate_normal(mean1_a, cov1_a, 500)
-    class2_a = np.random.multivariate_normal(mean2_a, cov2_a, 500)
-    dataset_a_features = np.concatenate((class1_a, class2_a), axis=0)
-    dataset_a_labels = np.concatenate((np.zeros(500), np.ones(500)))
-
-    # Generate dataset_b
-    mean1_b = [-2, -2, -2]
-    cov1_b = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-    mean2_b = [2, 2, 2]
-    cov2_b = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-    class1_b = np.random.multivariate_normal(mean1_b, cov1_b, 500)
-    class2_b = np.random.multivariate_normal(mean2_b, cov2_b, 500)
-    dataset_b_features = np.concatenate((class1_b, class2_b), axis=0)
-    dataset_b_labels = np.concatenate((np.zeros(500), np.ones(500)))
+    dataset_a_features, dataset_a_labels = generate_dataset_that_will_fit_naive_bayes_and_not_lor()
+    dataset_b_features, dataset_b_labels = generate_dataset_that_will_fit_lor_and_not_naive_bayes()
 
     return{'dataset_a_features': dataset_a_features,
            'dataset_a_labels': dataset_a_labels,
            'dataset_b_features': dataset_b_features,
            'dataset_b_labels': dataset_b_labels
            }
+
+
+def generate_dataset_that_will_fit_naive_bayes_and_not_lor():
+    mean1 = [0, 0, 0]
+    cov1 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    mean2 = [5, 5, 5]
+    cov2 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    mean3 = [10, 10, 10]
+    cov3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    mean4 = [15, 15, 15]
+    cov4 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+    samples1 = np.random.multivariate_normal(mean1, cov1, 250)
+    samples2 = np.random.multivariate_normal(mean2, cov2, 250)
+    samples3 = np.random.multivariate_normal(mean3, cov3, 250)
+    samples4 = np.random.multivariate_normal(mean4, cov4, 250)
+    labels1 = np.zeros(len(samples1))  # Class 0
+    labels2 = np.ones(len(samples2))  # Class 1
+    labels3 = np.full(len(samples3), 2)  # Class 2
+    labels4 = np.full(len(samples4), 3)  # Class 3
+    dataset_a_features = np.concatenate((samples1, samples2, samples3, samples4))
+    dataset_a_labels = np.concatenate((labels1, labels2, labels3, labels4))
+    # Shuffle the dataset
+    indices = np.arange(dataset_a_features.shape[0])
+    np.random.shuffle(indices)
+    dataset_a_features = dataset_a_features[indices]
+    dataset_a_labels = dataset_a_labels[indices]
+
+    return dataset_a_features, dataset_a_labels
+
+def generate_dataset_that_will_fit_lor_and_not_naive_bayes():
+    from scipy.stats import multivariate_normal
+    # non-independent features
+    feature_1 = multivariate_normal.rvs(1, 5, 1000)
+    feature_2 = 3 * feature_1 + multivariate_normal.rvs(0, 6, 1000)
+    feature_3 = 5 * feature_2 + multivariate_normal.rvs(0, 10, 1000)
+    labels = np.concatenate((np.zeros(500), np.ones(500)))
+    feature_3[labels == 0] += 21
+    feature_1[labels == 0] += 4
+
+    dataset_b_features = np.column_stack((feature_1, feature_2, feature_3))
+    dataset_b_labels = labels
+
+    return dataset_b_features, dataset_b_labels
+
 
 def plot_dataset(dataset, labels, title):
     fig = plt.figure(figsize=(8, 6))
@@ -524,3 +550,5 @@ def plot_decision_regions(X, y, classifier, resolution=0.01, title=""):
                     label=cl,
                     edgecolor='black')
     plt.show()
+
+
