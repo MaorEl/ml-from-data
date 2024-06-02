@@ -368,7 +368,8 @@ class NaiveBayesGaussian(object):
                 log_probs[:, idx] += np.log(gmm_pdf(feature_data, weights, mus, sigmas) + 1e-9)  # Log of GMM PDF + eps
             log_probs[:, idx] += np.log(priors)  # Adding log of prior probability
 
-        return np.array(list(self.prior.keys()))[np.argmax(log_probs, axis=1)]
+        preds = np.array(list(self.prior.keys()))[np.argmax(log_probs, axis=1)]
+        return np.array(preds).reshape(-1, 1)
 
 def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
     ''' 
@@ -395,25 +396,19 @@ def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
     best_eps : best eta from cv
     ''' 
 
-    lor_train_acc = None
-    lor_test_acc = None
-    bayes_train_acc = None
-    bayes_test_acc = None
-    # Todo maor - Provide one or two sentences on each graph explaining what you observe in the graph.
-    # Todo maor - uncomment Naive Bayes code
     lor = LogisticRegressionGD(eta=best_eta, eps=best_eps)
     lor.fit(x_train, y_train)
 
-    # nb = NaiveBayesGaussian(k=k)
-    # nb.fit(x_train, y_train)
+    nb = NaiveBayesGaussian(k=k)
+    nb.fit(x_train, y_train)
 
     lor_train_acc = calculate_accuracy(y_train, lor.predict(x_train))
     lor_test_acc = calculate_accuracy(y_test, lor.predict(x_test))
-    # bayes_train_acc = calculate_accuracy(y_train, nb.predict(x_train))
-    # bayes_test_acc = calculate_accuracy(y_test, nb.predict(x_test))
+    bayes_train_acc = np.count_nonzero(nb.predict(x_train) == y_train.reshape(-1, 1)) / len(y_train)
+    bayes_test_acc = np.count_nonzero( nb.predict(x_test) == y_test.reshape(-1, 1)) / len(y_test)
 
     plot_decision_regions(x_train, y_train, lor, title="Logistic Regression Decision Boundary")
-    # plot_decision_regions(x_train, y_train, nb, title="Naive Bayes Decision Boundary")
+    plot_decision_regions(x_train, y_train, nb, title="Naive Bayes Decision Boundary")
 
     # Plot cost vs iteration for Logistic Regression
     plt.plot(lor.Js)
@@ -424,8 +419,8 @@ def model_evaluation(x_train, y_train, x_test, y_test, k, best_eta, best_eps):
 
     print('Logistic Regression - Train Accuracy: ', lor_train_acc)
     print('Logistic Regression - Test Accuracy: ', lor_test_acc)
-    # print('Naive Bayes - Train Accuracy: ', bayes_train_acc)
-    # print('Naive Bayes - Test Accuracy: ', bayes_test_acc)
+    print('Naive Bayes - Train Accuracy: ', bayes_train_acc)
+    print('Naive Bayes - Test Accuracy: ', bayes_test_acc)
 
     return {'lor_train_acc': lor_train_acc,
             'lor_test_acc': lor_test_acc,
